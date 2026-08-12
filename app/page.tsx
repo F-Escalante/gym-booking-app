@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default async function Home() {
@@ -7,6 +8,25 @@ export default async function Home() {
 
   return (
     <main className="p-8 max-w-4xl mx-auto">
+
+      <nav className="flex gap-4 mb-6">
+        <Link href="/classes">
+          Clases
+        </Link>
+
+        <Link href="/reservations">
+          Mis Reservas
+        </Link>
+
+        <Link href="/me">
+          Mi Perfil
+        </Link>
+
+        <Link href="/login">
+          Login
+        </Link>
+      </nav>
+
       <h1 className="text-3xl font-bold mb-6">
         Clases Disponibles
       </h1>
