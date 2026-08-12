@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function ReserveButton({
@@ -10,6 +10,7 @@ export default function ReserveButton({
   classId: number;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -78,7 +79,9 @@ export default function ReserveButton({
     } = await supabase.auth.getSession();
 
     if (!session) {
-      router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
+      const qs = searchParams?.toString();
+      const full = `${pathname}${qs ? `?${qs}` : ""}`;
+      router.push(`/login?next=${encodeURIComponent(full || "/")}`);
       return;
     }
 
