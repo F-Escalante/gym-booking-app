@@ -43,7 +43,26 @@ export default function AdminPage() {
         setClasses(data || []);
       };
 
-      loadClasses();
+      const loadAll = async () => {
+        const [{ data: classesData, error: classesErr }, { data: seriesData, error: seriesErr }] = await Promise.all([
+          supabase.from("classes").select("*"),
+          supabase.from("class_series").select("*"),
+        ]);
+
+        if (classesErr) {
+          setError(classesErr.message);
+          return;
+        }
+        if (seriesErr) {
+          setError(seriesErr.message);
+          return;
+        }
+
+        setClasses(classesData || []);
+        setSeriesList(seriesData || []);
+      };
+
+      loadAll();
     }
   }, [authLoading]);
 
@@ -143,6 +162,8 @@ export default function AdminPage() {
   const [seriesTime, setSeriesTime] = useState("");
   const [seriesStartDate, setSeriesStartDate] = useState("");
   const [seriesEndDate, setSeriesEndDate] = useState("");
+  const [seriesList, setSeriesList] = useState<any[]>([]);
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
 
   const toggleWeekday = (d: number) => {
     setSeriesWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -183,31 +204,46 @@ export default function AdminPage() {
     }
 
     try {
-      const res = await fetch("/api/admin/series", {
-        method: "POST",
+      const url = selectedSeriesId ? `/api/admin/series` : `/api/admin/series`;
+      const method = selectedSeriesId ? "PUT" : "POST";
+      const body = selectedSeriesId
+        ? {
+            id: selectedSeriesId,
+            title: seriesTitle.trim(),
+            description: seriesDescription,
+            capacity: seriesCapacity,
+            weekdays: seriesWeekdays,
+            time: seriesTime,
+            start_date: seriesStartDate,
+            end_date: seriesEndDate || null,
+          }
+        : {
+            title: seriesTitle.trim(),
+            description: seriesDescription,
+            capacity: seriesCapacity,
+            weekdays: seriesWeekdays,
+            time: seriesTime,
+            start_date: seriesStartDate,
+            end_date: seriesEndDate || null,
+          };
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title: seriesTitle.trim(),
-          description: seriesDescription,
-          capacity: seriesCapacity,
-          weekdays: seriesWeekdays,
-          time: seriesTime,
-          start_date: seriesStartDate,
-          end_date: seriesEndDate || null,
-        }),
+        body: JSON.stringify(body),
       });
 
       const json = await res.json();
       setLoading(false);
       if (!res.ok) {
-        setError(json?.error || "Error al crear la serie");
+        setError(json?.error || (selectedSeriesId ? "Error al actualizar la serie" : "Error al crear la serie"));
         return;
       }
 
-      setSuccess("Serie creada y instancias generadas correctamente.");
+      setSuccess(selectedSeriesId ? "Serie actualizada correctamente." : "Serie creada y instancias generadas correctamente.");
       setSeriesTitle("");
       setSeriesDescription("");
       setSeriesCapacity(1);
@@ -215,10 +251,68 @@ export default function AdminPage() {
       setSeriesTime("");
       setSeriesStartDate("");
       setSeriesEndDate("");
+      setSelectedSeriesId(null);
 
-      // refresh classes
-      const { data } = await supabase.from("classes").select("*");
-      setClasses(data || []);
+      // refresh classes and series
+      const [{ data: classesData }, { data: seriesData }] = await Promise.all([
+        supabase.from("classes").select("*"),
+        supabase.from("class_series").select("*"),
+      ]);
+      setClasses(classesData || []);
+      setSeriesList(seriesData || []);
+    } catch (e: any) {
+      setLoading(false);
+      setError(e?.message || String(e));
+    }
+  };
+
+  const editSeries = (s: any) => {
+    setSelectedSeriesId(s.id);
+    setSeriesTitle(s.title ?? "");
+    setSeriesDescription(s.description ?? "");
+    setSeriesCapacity(s.capacity ?? 1);
+    setSeriesWeekdays(s.weekdays ?? []);
+    setSeriesTime(s.time ?? "");
+    setSeriesStartDate(s.start_date ?? "");
+    setSeriesEndDate(s.end_date ?? "");
+    setError(null);
+    setSuccess(null);
+  };
+
+  const deleteSeries = async (id: string) => {
+    if (!confirm("¿Querés eliminar la serie? Esto puede borrar también las instancias generadas.")) return;
+    const cascade = confirm("Borrar también las instancias relacionadas? (Aceptar = sí)");
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      setLoading(false);
+      router.push(`/login?next=/admin`);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/series?id=${encodeURIComponent(id)}${cascade ? "&cascade=1" : ""}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = await res.json();
+      setLoading(false);
+      if (!res.ok) {
+        setError(json?.error || "Error al eliminar la serie");
+        return;
+      }
+
+      setSuccess("Serie eliminada correctamente.");
+      const [{ data: classesData }, { data: seriesData }] = await Promise.all([
+        supabase.from("classes").select("*"),
+        supabase.from("class_series").select("*"),
+      ]);
+      setClasses(classesData || []);
+      setSeriesList(seriesData || []);
     } catch (e: any) {
       setLoading(false);
       setError(e?.message || String(e));
@@ -391,8 +485,31 @@ export default function AdminPage() {
         </div>
 
         <button onClick={createSeries} disabled={loading} className="bg-green-600 text-white px-4 py-2 rounded">
-          {loading ? 'Creando...' : 'Crear serie y generar instancias'}
+          {loading ? 'Creando...' : selectedSeriesId ? 'Actualizar serie' : 'Crear serie y generar instancias'}
         </button>
+      </div>
+
+      <div className="mb-6 p-4 border rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Series creadas</h2>
+        {seriesList.length === 0 ? <p className="text-sm text-gray-600">No hay series aún.</p> : null}
+        <div className="space-y-3">
+          {seriesList.map((s) => (
+            <div key={s.id} className="border rounded p-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold">{s.title}</h3>
+                  <p className="text-sm text-gray-700">{s.description}</p>
+                  <p className="text-sm text-gray-600">Días: {s.weekdays?.join(", ")}</p>
+                  <p className="text-sm text-gray-600">Hora: {s.time}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => editSeries(s)} className="bg-blue-600 text-white px-3 py-1 rounded">Editar</button>
+                  <button onClick={() => deleteSeries(s.id)} className="bg-red-600 text-white px-3 py-1 rounded">Eliminar</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-4">

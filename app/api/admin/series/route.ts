@@ -72,3 +72,78 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });
   }
 }
+
+export async function GET(req: Request) {
+  const adminUserId = await getAdminUserId(req);
+  const authHeader = req.headers.get("authorization");
+  const hasSecret = ADMIN_SECRET && req.headers.get("x-admin-secret") === ADMIN_SECRET;
+  if (!adminUserId && !authHeader && !hasSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { data, error } = await supabase.from("class_series").select("*").order("created_at", { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data }, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  const adminUserId = await getAdminUserId(req);
+  const authHeader = req.headers.get("authorization");
+  const hasSecret = ADMIN_SECRET && req.headers.get("x-admin-secret") === ADMIN_SECRET;
+  if (!adminUserId && !authHeader && !hasSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { id, title, description, capacity, weekdays, time, start_date, end_date } = body;
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const payload: any = {};
+  if (title !== undefined) payload.title = title;
+  if (description !== undefined) payload.description = description;
+  if (capacity !== undefined) payload.capacity = capacity;
+  if (weekdays !== undefined) payload.weekdays = weekdays;
+  if (time !== undefined) payload.time = time;
+  if (start_date !== undefined) payload.start_date = start_date;
+  if (end_date !== undefined) payload.end_date = end_date;
+
+  try {
+    const { data, error } = await supabase.from("class_series").update(payload).eq("id", id).select().maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data }, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const adminUserId = await getAdminUserId(req);
+  const authHeader = req.headers.get("authorization");
+  const hasSecret = ADMIN_SECRET && req.headers.get("x-admin-secret") === ADMIN_SECRET;
+  if (!adminUserId && !authHeader && !hasSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    const cascade = url.searchParams.get("cascade") === "1";
+    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+    if (cascade) {
+      // delete instances
+      const { error: delErr } = await supabase.from("classes").delete().eq("series_id", id);
+      if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+    }
+
+    const { data, error } = await supabase.from("class_series").delete().eq("id", id).select().maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data }, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });
+  }
+}
