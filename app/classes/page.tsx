@@ -1,24 +1,44 @@
 import { supabase } from "@/lib/supabase";
 import ReserveButton from "@/components/ReserveButton";
 import ClassesFilter from "@/components/ClassesFilter";
+import Pagination from "@/components/Pagination";
 
-export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string } }) {
+export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string; page?: string } }) {
   const activity = searchParams?.activity ?? null;
   const date = searchParams?.date ?? null;
+  const page = parseInt(searchParams?.page || "1", 10) || 1;
+  const perPage = 10;
 
-  let query = supabase.from("classes").select("*");
+  let base = supabase.from("classes");
   if (activity) {
-    query = query.ilike("title", `%${activity}%`);
+    base = base.ilike("title", `%${activity}%`);
   }
 
   if (date) {
-    // filter between start and end of the selected date (UTC)
     const start = `${date}T00:00:00Z`;
     const end = `${date}T23:59:59Z`;
-    query = query.gte("class_date", start).lte("class_date", end);
+    base = base.gte("class_date", start).lte("class_date", end);
   }
 
-  const { data: classes } = await query.order("class_date", { ascending: true });
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  const { data: classes, count, error } = await base
+    .select("*", { count: "exact" })
+    .order("class_date", { ascending: true })
+    .range(from, to);
+
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+  if (error) {
+    return (
+      <main className="p-8">
+        <h1 className="text-3xl font-bold mb-6">Clases</h1>
+        <p className="text-red-600">Error al cargar clases: {error.message}</p>
+      </main>
+    );
+  }
 
   return (
     <main className="p-8">
@@ -48,6 +68,11 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
           </div>
         </div>
       ))}
+
+      <div className="mt-6 flex items-center gap-3">
+        <Pagination current={page} totalPages={totalPages} />
+        <p className="text-sm text-gray-600">Mostrando {classes?.length ?? 0} de {total} clases</p>
+      </div>
     </main>
   );
 }
