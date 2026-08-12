@@ -6,6 +6,7 @@ import Pagination from "@/components/Pagination";
 export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string; page?: string } }) {
   const activity = searchParams?.activity ?? null;
   const date = searchParams?.date ?? null;
+  const time = searchParams?.time ?? null;
   const page = parseInt(searchParams?.page || "1", 10) || 1;
   const perPage = 10;
 
@@ -15,9 +16,18 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
   }
 
   if (date) {
-    const start = `${date}T00:00:00Z`;
-    const end = `${date}T23:59:59Z`;
-    base = base.gte("class_date", start).lte("class_date", end);
+    if (time) {
+      // filter for the selected minute on that date
+      const normalizedTime = time.length === 5 ? `${time}:00` : time;
+      const start = `${date}T${normalizedTime}Z`;
+      // end at end of that minute
+      const end = `${date}T${normalizedTime.slice(0,5)}:59Z`;
+      base = base.gte("class_date", start).lte("class_date", end);
+    } else {
+      const start = `${date}T00:00:00Z`;
+      const end = `${date}T23:59:59Z`;
+      base = base.gte("class_date", start).lte("class_date", end);
+    }
   }
 
   const from = (page - 1) * perPage;
