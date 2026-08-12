@@ -135,6 +135,96 @@ export default function AdminPage() {
     setSuccess(null);
   };
 
+  // Series (recurrence) state
+  const [seriesTitle, setSeriesTitle] = useState("");
+  const [seriesDescription, setSeriesDescription] = useState("");
+  const [seriesCapacity, setSeriesCapacity] = useState(1);
+  const [seriesWeekdays, setSeriesWeekdays] = useState<number[]>([]); // 0-6
+  const [seriesTime, setSeriesTime] = useState("");
+  const [seriesStartDate, setSeriesStartDate] = useState("");
+  const [seriesEndDate, setSeriesEndDate] = useState("");
+
+  const toggleWeekday = (d: number) => {
+    setSeriesWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+  };
+
+  const createSeries = async () => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    if (!seriesTitle || !seriesTitle.trim()) {
+      setLoading(false);
+      setError("El título de la serie es obligatorio.");
+      return;
+    }
+    if (!seriesWeekdays || seriesWeekdays.length === 0) {
+      setLoading(false);
+      setError("Seleccioná al menos un día de la semana para la recurrencia.");
+      return;
+    }
+    if (!seriesTime) {
+      setLoading(false);
+      setError("Seleccioná la hora de la clase.");
+      return;
+    }
+    if (!seriesStartDate) {
+      setLoading(false);
+      setError("Seleccioná la fecha de inicio.");
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      setLoading(false);
+      router.push(`/login?next=/admin`);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/series", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: seriesTitle.trim(),
+          description: seriesDescription,
+          capacity: seriesCapacity,
+          weekdays: seriesWeekdays,
+          time: seriesTime,
+          start_date: seriesStartDate,
+          end_date: seriesEndDate || null,
+        }),
+      });
+
+      const json = await res.json();
+      setLoading(false);
+      if (!res.ok) {
+        setError(json?.error || "Error al crear la serie");
+        return;
+      }
+
+      setSuccess("Serie creada y instancias generadas correctamente.");
+      setSeriesTitle("");
+      setSeriesDescription("");
+      setSeriesCapacity(1);
+      setSeriesWeekdays([]);
+      setSeriesTime("");
+      setSeriesStartDate("");
+      setSeriesEndDate("");
+
+      // refresh classes
+      const { data } = await supabase.from("classes").select("*");
+      setClasses(data || []);
+    } catch (e: any) {
+      setLoading(false);
+      setError(e?.message || String(e));
+    }
+  };
+
   const deleteClass = async (id: string) => {
     if (!confirm("¿Querés eliminar esta clase?")) return;
 
@@ -245,6 +335,64 @@ export default function AdminPage() {
         {error ? (
           <p className="text-red-600 mt-3">{error}</p>
         ) : null}
+      </div>
+
+      <div className="mb-6 p-4 border rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Crear serie de clases (recurrencia)</h2>
+
+        <input
+          className="border p-2 w-full mb-2"
+          placeholder="Título de la serie"
+          value={seriesTitle}
+          onChange={(e) => setSeriesTitle(e.target.value)}
+        />
+        <textarea
+          className="border p-2 w-full mb-2"
+          placeholder="Descripción"
+          value={seriesDescription}
+          onChange={(e) => setSeriesDescription(e.target.value)}
+        />
+
+        <div className="mb-2">
+          <label className="block mb-1">Días de la semana</label>
+          <div className="flex gap-2">
+            {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map((label, idx) => (
+              <button
+                key={idx}
+                onClick={() => toggleWeekday(idx)}
+                type="button"
+                className={`px-2 py-1 rounded border ${seriesWeekdays.includes(idx) ? 'bg-blue-600 text-white' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <label className="block mb-1">Hora</label>
+          <input type="time" className="border p-2" value={seriesTime} onChange={(e) => setSeriesTime(e.target.value)} />
+        </div>
+
+        <div className="mb-2 flex gap-2">
+          <div>
+            <label className="block mb-1">Desde</label>
+            <input type="date" className="border p-2" value={seriesStartDate} onChange={(e) => setSeriesStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block mb-1">Hasta (opcional)</label>
+            <input type="date" className="border p-2" value={seriesEndDate} onChange={(e) => setSeriesEndDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <label className="block mb-1">Cupos</label>
+          <input type="number" min={1} className="border p-2 w-32" value={seriesCapacity} onChange={(e) => setSeriesCapacity(Number(e.target.value))} />
+        </div>
+
+        <button onClick={createSeries} disabled={loading} className="bg-green-600 text-white px-4 py-2 rounded">
+          {loading ? 'Creando...' : 'Crear serie y generar instancias'}
+        </button>
       </div>
 
       <div className="space-y-4">
