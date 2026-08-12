@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 export default function ClassesFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const [activity, setActivity] = useState("");
   const [date, setDate] = useState("");
@@ -24,14 +25,16 @@ export default function ClassesFilter() {
     if (date) params.set("date", date);
     if (time) params.set("time", time);
     const qs = params.toString();
-    router.push(`/classes${qs ? `?${qs}` : ""}`);
+    const base = pathname || "/classes";
+    router.push(`${base}${qs ? `?${qs}` : ""}`);
   };
 
   const clear = () => {
     setActivity("");
     setDate("");
     setTime("");
-    router.push(`/classes`);
+    const base = pathname || "/classes";
+    router.push(base);
   };
 
   return (
