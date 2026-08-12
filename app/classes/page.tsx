@@ -28,11 +28,24 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
 
       {classes?.map((gymClass) => (
         <div key={gymClass.id} className="border rounded p-4 mb-4">
-          <h2>{gymClass.title}</h2>
+          <h2 className="text-xl font-semibold">{gymClass.title}</h2>
 
-          <p>{gymClass.description}</p>
+          <p className="text-sm text-gray-700">{gymClass.description}</p>
 
-          <ReserveButton classId={gymClass.id} />
+          {gymClass.class_date && (
+            (() => {
+              const d = new Date(gymClass.class_date);
+              const dateStr = d.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "short", day: "numeric" });
+              const timeStr = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <p className="text-sm text-gray-600 mt-2">{dateStr} — {timeStr}</p>
+              );
+            })()
+          )}
+
+          <div className="mt-3">
+            <ReserveButton classId={gymClass.id} />
+          </div>
         </div>
       ))}
     </main>
