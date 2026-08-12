@@ -36,7 +36,7 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
             (() => {
               const d = new Date(gymClass.class_date);
               const dateStr = d.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "short", day: "numeric" });
-              const timeStr = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+              const timeStr = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
               return (
                 <p className="text-sm text-gray-600 mt-2">{dateStr} — {timeStr}</p>
               );

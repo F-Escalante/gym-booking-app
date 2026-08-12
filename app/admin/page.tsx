@@ -74,7 +74,7 @@ export default function AdminPage() {
     const classPayload: any = {
       title: title.trim(),
       description,
-      class_date: classDate,
+      class_date: new Date(classDate).toISOString(),
       capacity,
     };
 
