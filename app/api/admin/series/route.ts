@@ -99,7 +99,7 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json();
-  const { id, title, description, capacity, weekdays, time, start_date, end_date } = body;
+  const { id, title, description, capacity, weekdays, time, start_date, end_date, propagate } = body;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const payload: any = {};
@@ -114,6 +114,44 @@ export async function PUT(req: Request) {
   try {
     const { data, error } = await supabase.from("class_series").update(payload).eq("id", id).select().maybeSingle();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // If requested, propagate some fields to future class instances
+    if (propagate) {
+      try {
+        const nowIso = new Date().toISOString();
+        const { data: instances, error: instErr } = await supabase
+          .from("classes")
+          .select("id, class_date")
+          .eq("series_id", id)
+          .gt("class_date", nowIso);
+        if (instErr) throw instErr;
+
+        // Update each future instance: title/description/capacity and optionally time
+        for (const inst of instances || []) {
+          const updates: any = {};
+          if (title !== undefined) updates.title = title;
+          if (description !== undefined) updates.description = description;
+          if (capacity !== undefined) updates.capacity = capacity;
+
+          if (time !== undefined) {
+            // compute new class_date preserving the original date (UTC) and applying new time
+            const orig = new Date(inst.class_date);
+            const yyyy = orig.getUTCFullYear();
+            const mm = String(orig.getUTCMonth() + 1).padStart(2, "0");
+            const dd = String(orig.getUTCDate()).padStart(2, "0");
+            // normalize time string 'HH:MM' or 'HH:MM:SS'
+            const normalizedTime = time.length === 5 ? `${time}:00` : time;
+            const newIso = `${yyyy}-${mm}-${dd}T${normalizedTime}Z`;
+            updates.class_date = newIso;
+          }
+
+          await supabase.from("classes").update(updates).eq("id", inst.id);
+        }
+      } catch (e: any) {
+        // log but don't fail the whole request
+        console.error("Error propagating series updates:", e?.message || e);
+      }
+    }
+
     return NextResponse.json({ data }, { status: 200 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });

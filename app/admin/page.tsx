@@ -164,6 +164,7 @@ export default function AdminPage() {
   const [seriesEndDate, setSeriesEndDate] = useState("");
   const [seriesList, setSeriesList] = useState<any[]>([]);
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
+  const [propagateOnUpdate, setPropagateOnUpdate] = useState(true);
 
   const toggleWeekday = (d: number) => {
     setSeriesWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -216,6 +217,7 @@ export default function AdminPage() {
             time: seriesTime,
             start_date: seriesStartDate,
             end_date: seriesEndDate || null,
+            propagate: propagateOnUpdate,
           }
         : {
             title: seriesTitle.trim(),
@@ -484,9 +486,16 @@ export default function AdminPage() {
           <input type="number" min={1} className="border p-2 w-32" value={seriesCapacity} onChange={(e) => setSeriesCapacity(Number(e.target.value))} />
         </div>
 
-        <button onClick={createSeries} disabled={loading} className="bg-green-600 text-white px-4 py-2 rounded">
-          {loading ? 'Creando...' : selectedSeriesId ? 'Actualizar serie' : 'Crear serie y generar instancias'}
-        </button>
+        <div className="flex items-center gap-4 mt-3">
+          <button onClick={createSeries} disabled={loading} className="bg-green-600 text-white px-4 py-2 rounded">
+            {loading ? 'Creando...' : selectedSeriesId ? 'Actualizar serie' : 'Crear serie y generar instancias'}
+          </button>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={propagateOnUpdate} onChange={(e) => setPropagateOnUpdate(e.target.checked)} />
+            Propagar cambios a instancias futuras
+          </label>
+        </div>
       </div>
 
       <div className="mb-6 p-4 border rounded-lg">
