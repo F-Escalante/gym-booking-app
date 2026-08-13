@@ -16,7 +16,7 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
   function buildClassesQuery() {
     let q: any = supabase.from("classes").select("*", { count: "exact" });
     if (activity) {
-      q = q.ilike("title", `%${activity}%`);
+      q = q.filter("title", "ilike", `%${activity}%`);
     }
 
     if (date) {
