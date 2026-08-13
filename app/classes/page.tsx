@@ -4,10 +4,12 @@ import ClassesFilter from "@/components/ClassesFilter";
 import Pagination from "@/components/Pagination";
 
 export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string; page?: string } }) {
-  const activity = searchParams?.activity ?? null;
-  const date = searchParams?.date ?? null;
-  const time = searchParams?.time ?? null;
-  const page = parseInt(searchParams?.page || "1", 10) || 1;
+  // searchParams can be a Promise in some Next.js runtimes — await it before use
+  const sp = await (searchParams as any);
+  const activity = sp?.activity ?? null;
+  const date = sp?.date ?? null;
+  const time = sp?.time ?? null;
+  const page = parseInt(sp?.page || "1", 10) || 1;
   const perPage = 10;
 
   let base = supabase.from("classes");
