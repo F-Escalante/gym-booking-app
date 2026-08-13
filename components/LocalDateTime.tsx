@@ -7,8 +7,9 @@ export default function LocalDateTime({ iso, locale = "es-ES" }: { iso?: string 
     if (!iso) return "";
     try {
       const d = new Date(iso);
-      const dateStr = d.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "short", day: "numeric" });
-      const timeStr = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+      // Show the stored instant as-is (UTC) so the displayed wall time matches what's in the DB
+      const dateStr = d.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+      const timeStr = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
       return `${dateStr} — ${timeStr}`;
     } catch (e) {
       return iso;
