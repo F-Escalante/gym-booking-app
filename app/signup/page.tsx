@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
@@ -11,7 +11,6 @@ export default function SignupPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [useMagicLink, setUseMagicLink] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const signup = async () => {
     setLoading(true);
@@ -32,9 +31,10 @@ export default function SignupPage() {
         : "Registro solicitado. Revisá tu email para completar el registro."
     );
 
-    const next = searchParams.get("next");
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next") || "/login";
     setTimeout(() => {
-      router.push(next || "/login");
+      router.push(next);
     }, 1400);
   };
 
