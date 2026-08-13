@@ -32,8 +32,8 @@ export default function AuthCallbackPage() {
         setMessage("Verificación completada. Redirigiendo...");
 
         // redirect to next param or home
-        const nextParam = new URL(window.location.href).searchParams.get("next");
-        const next = typeof nextParam === "string" ? nextParam : "/";
+        const nextParam = new URL(window.location.href).searchParams.get("next") as string | null;
+        const next: string = nextParam ?? "/";
         setTimeout(() => router.replace(next), 800);
       } catch (err) {
         console.error(err);
