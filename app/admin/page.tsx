@@ -90,10 +90,23 @@ export default function AdminPage() {
       return;
     }
 
+    // Convert the `datetime-local` value (local time) into an ISO with explicit local offset
+    const toOffsetIso = (localDateTime: string) => {
+      if (!localDateTime) return null;
+      // ensure seconds
+      const normalized = localDateTime.length === 16 ? `${localDateTime}:00` : localDateTime;
+      const d = new Date(normalized);
+      const offsetMin = -d.getTimezoneOffset();
+      const sign = offsetMin >= 0 ? "+" : "-";
+      const oh = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, "0");
+      const om = String(Math.abs(offsetMin) % 60).padStart(2, "0");
+      return `${normalized}${sign}${oh}:${om}`;
+    };
+
     const classPayload: any = {
       title: title.trim(),
       description,
-      class_date: new Date(classDate).toISOString(),
+      class_date: toOffsetIso(classDate),
       capacity,
     };
 
@@ -148,7 +161,19 @@ export default function AdminPage() {
     setSelectedClassId(gymClass.id);
     setTitle(gymClass.title ?? "");
     setDescription(gymClass.description ?? "");
-    setClassDate(gymClass.class_date?.slice(0, 16) ?? "");
+    // Convert stored ISO/timestamptz to `datetime-local` value in local time
+    const toLocalInput = (iso?: string) => {
+      if (!iso) return "";
+      try {
+        const d = new Date(iso);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } catch {
+        return iso.slice(0, 16);
+      }
+    };
+
+    setClassDate(toLocalInput(gymClass.class_date));
     setCapacity(gymClass.capacity ?? 1);
     setError(null);
     setSuccess(null);
