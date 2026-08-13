@@ -24,11 +24,11 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
         const normalizedTime = time.length === 5 ? `${time}:00` : time;
         const start = `${date}T${normalizedTime}Z`;
         const end = `${date}T${normalizedTime.slice(0, 5)}:59Z`;
-        q = q.gte("class_date", start).lte("class_date", end);
+        q = q.filter("class_date", "gte", start).filter("class_date", "lte", end);
       } else {
         const start = `${date}T00:00:00Z`;
         const end = `${date}T23:59:59Z`;
-        q = q.gte("class_date", start).lte("class_date", end);
+        q = q.filter("class_date", "gte", start).filter("class_date", "lte", end);
       }
     }
 
