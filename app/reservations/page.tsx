@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import LocalDateTime from "@/components/LocalDateTime";
 
 export default function MisReservasPage() {
   const [reservations, setReservations] = useState<any[]>([]);
@@ -83,12 +84,9 @@ export default function MisReservasPage() {
           <div
             key={reservation.id}
             className="border rounded-lg p-4 mb-4"
-          >
-            <h2 className="text-xl font-semibold">
-              {reservation.classes?.title}
-            </h2>
-
             <p>
+              Fecha: <LocalDateTime iso={reservation.classes?.class_date} locale="es-AR" />
+            </p>
               {reservation.classes?.description}
             </p>
 
