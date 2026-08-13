@@ -91,23 +91,19 @@ export default function AdminPage() {
       return;
     }
 
-    // Convert the `datetime-local` value (local time) into an ISO with explicit local offset
-    const toOffsetIso = (localDateTime: string) => {
+    // Convert the `datetime-local` value (local time) into an ISO in UTC
+    const toUtcIso = (localDateTime: string) => {
       if (!localDateTime) return null;
       // ensure seconds
       const normalized = localDateTime.length === 16 ? `${localDateTime}:00` : localDateTime;
       const d = new Date(normalized);
-      const offsetMin = -d.getTimezoneOffset();
-      const sign = offsetMin >= 0 ? "+" : "-";
-      const oh = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, "0");
-      const om = String(Math.abs(offsetMin) % 60).padStart(2, "0");
-      return `${normalized}${sign}${oh}:${om}`;
+      return d.toISOString();
     };
 
     const classPayload: any = {
       title: title.trim(),
       description,
-      class_date: toOffsetIso(classDate),
+      class_date: toUtcIso(classDate),
       capacity,
     };
 
