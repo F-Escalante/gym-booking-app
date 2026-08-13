@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import LocalDateTime from "@/components/LocalDateTime";
 
 export default function AdminPage() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -551,7 +552,7 @@ export default function AdminPage() {
           <div key={gymClass.id} className="border rounded-lg p-4 shadow">
             <h3 className="text-xl font-semibold">{gymClass.title}</h3>
             <p>{gymClass.description}</p>
-            <p>Fecha: {new Date(gymClass.class_date).toLocaleString("es-AR")}</p>
+            <p>Fecha: <span>{/* client formats timezone correctly */}<script type="module" /></span><span className="inline-block"><LocalDateTime iso={gymClass.class_date} locale="es-AR" /></span></p>
             <p>Cupos: {gymClass.capacity}</p>
             <div className="mt-4 flex gap-2">
               <button

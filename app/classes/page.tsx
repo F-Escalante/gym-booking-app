@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import ReserveButton from "@/components/ReserveButton";
 import ClassesFilter from "@/components/ClassesFilter";
 import Pagination from "@/components/Pagination";
+import LocalDateTime from "@/components/LocalDateTime";
 
 export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string; page?: string } }) {
   // searchParams can be a Promise in some Next.js runtimes — await it before use
@@ -65,15 +66,9 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
           <p className="text-sm text-gray-700">{gymClass.description}</p>
 
           {gymClass.class_date && (
-            (() => {
-              const d = new Date(gymClass.class_date);
-              const dateStr = d.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "short", day: "numeric" });
-              const timeStr = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
-              return (
-                <p className="text-sm text-gray-600 mt-2">{dateStr} — {timeStr}</p>
-              );
-            })()
+            <p className="text-sm text-gray-600 mt-2"><LocalDateTime iso={gymClass.class_date} /></p>
           )}
+          <div className="text-xs text-gray-500 mt-1">raw: {String(gymClass.class_date)}</div>
 
           <div className="mt-3">
             <ReserveButton classId={gymClass.id} />
