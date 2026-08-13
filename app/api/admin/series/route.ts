@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) as string | undefined;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY as string | undefined;
 const ADMIN_SECRET = process.env.ADMIN_API_SECRET as string | undefined;
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
-  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in env");
+  throw new Error(
+    "Missing Supabase environment variables. Set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY in your environment."
+  );
 }
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
