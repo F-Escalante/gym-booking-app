@@ -81,20 +81,13 @@ export default function MisReservasPage() {
         <p>No tienes reservas todavía.</p>
       ) : (
         reservations.map((reservation) => (
-          <div
-            key={reservation.id}
-            className="border rounded-lg p-4 mb-4"
-            <p>
-              Fecha: <LocalDateTime iso={reservation.classes?.class_date} locale="es-AR" />
-            </p>
-              {reservation.classes?.description}
-            </p>
+          <div key={reservation.id} className="border rounded-lg p-4 mb-4">
+            <h2 className="text-xl font-semibold">{reservation.classes?.title}</h2>
+
+            <p>{reservation.classes?.description}</p>
 
             <p>
-              Fecha:{" "}
-              {new Date(
-                reservation.classes?.class_date
-              ).toLocaleString("es-AR")}
+              Fecha: <LocalDateTime iso={reservation.classes?.class_date} locale="es-AR" />
             </p>
 
             <div className="mt-3">
@@ -102,14 +95,10 @@ export default function MisReservasPage() {
                 onClick={() => cancelReservation(reservation.id)}
                 disabled={deletingIds.includes(reservation.id)}
                 className={`bg-red-600 text-white px-3 py-1 rounded ${
-                  deletingIds.includes(reservation.id)
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""
+                  deletingIds.includes(reservation.id) ? "opacity-60 cursor-not-allowed" : ""
                 }`}
               >
-                {deletingIds.includes(reservation.id)
-                  ? "Cancelando..."
-                  : "Cancelar reserva"}
+                {deletingIds.includes(reservation.id) ? "Cancelando..." : "Cancelar reserva"}
               </button>
             </div>
           </div>
