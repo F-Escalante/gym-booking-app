@@ -59,7 +59,7 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
 
       <ClassesFilter />
 
-      {classes?.map((gymClass) => (
+      {classes?.map((gymClass: any) => (
         <div key={gymClass.id} className="border rounded p-4 mb-4">
           <h2 className="text-xl font-semibold">{gymClass.title}</h2>
 
