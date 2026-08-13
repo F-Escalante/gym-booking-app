@@ -24,7 +24,9 @@ export default function AuthCallbackPage() {
           const refresh_token = params.get("refresh_token");
 
           if (access_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
+            const payload: any = { access_token };
+            if (refresh_token) payload.refresh_token = refresh_token;
+            await supabase.auth.setSession(payload);
           }
         }
 
