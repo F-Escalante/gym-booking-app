@@ -12,33 +12,33 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
   const page = parseInt(sp?.page || "1", 10) || 1;
   const perPage = 10;
 
-  let base = supabase.from("classes");
-  if (activity) {
-    base = base.ilike("title", `%${activity}%`);
-  }
-
-  if (date) {
-    if (time) {
-      // filter for the selected minute on that date
-      const normalizedTime = time.length === 5 ? `${time}:00` : time;
-      const start = `${date}T${normalizedTime}Z`;
-      // end at end of that minute
-      const end = `${date}T${normalizedTime.slice(0,5)}:59Z`;
-      base = base.gte("class_date", start).lte("class_date", end);
-    } else {
-      const start = `${date}T00:00:00Z`;
-      const end = `${date}T23:59:59Z`;
-      base = base.gte("class_date", start).lte("class_date", end);
+  function buildClassesQuery() {
+    let q: any = supabase.from("classes").select("*", { count: "exact" });
+    if (activity) {
+      q = q.ilike("title", `%${activity}%`);
     }
+
+    if (date) {
+      if (time) {
+        const normalizedTime = time.length === 5 ? `${time}:00` : time;
+        const start = `${date}T${normalizedTime}Z`;
+        const end = `${date}T${normalizedTime.slice(0, 5)}:59Z`;
+        q = q.gte("class_date", start).lte("class_date", end);
+      } else {
+        const start = `${date}T00:00:00Z`;
+        const end = `${date}T23:59:59Z`;
+        q = q.gte("class_date", start).lte("class_date", end);
+      }
+    }
+
+    return q;
   }
 
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
-  const { data: classes, count, error } = await base
-    .select("*", { count: "exact" })
-    .order("class_date", { ascending: true })
-    .range(from, to);
+  const q = buildClassesQuery();
+  const { data: classes, count, error } = await q.order("class_date", { ascending: true }).range(from, to);
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
