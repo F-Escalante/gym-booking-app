@@ -27,29 +27,10 @@ export default function ReserveButton({
         data: { session },
       } = await supabase.auth.getSession();
 
-      // fetch class capacity
-      const { data: classData, error: classError } = await supabase
-        .from("classes")
-        .select("capacity")
-        .eq("id", classId)
-        .maybeSingle();
-
-      if (classError) {
-        console.error(classError);
-      }
-
-      // count reservations for the class
-      const { data: reservationsData, count } = await supabase
-        .from("reservations")
-        .select("id", { count: "exact" })
-        .eq("class_id", classId);
-
-      const capacity = classData?.capacity ?? null;
-      const reservedCount = count ?? (reservationsData?.length ?? 0);
-
-      if (mounted) {
-        if (capacity !== null) setSpotsLeft(Math.max(0, capacity - reservedCount));
-      }
+      const availabilityResponse = await fetch(`/api/classes/${classId}/availability`);
+      const availability = await availabilityResponse.json();
+      if (!availabilityResponse.ok) console.error(availability.error);
+      if (mounted && availabilityResponse.ok) setSpotsLeft(availability.spotsLeft);
 
       // check if current user already reserved
       if (session && mounted) {
@@ -108,7 +89,11 @@ export default function ReserveButton({
     }
 
     setReserved(true);
-    setSpotsLeft((s) => (s === null ? null : Math.max(0, s - 1)));
+
+    // Re-read the authoritative count so every user sees the current availability.
+    const availabilityResponse = await fetch(`/api/classes/${classId}/availability`);
+    const availability = await availabilityResponse.json();
+    if (availabilityResponse.ok) setSpotsLeft(availability.spotsLeft);
 
     alert("Reserva realizada");
   };

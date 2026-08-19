@@ -4,12 +4,13 @@ import ClassesFilter from "@/components/ClassesFilter";
 import Pagination from "@/components/Pagination";
 import LocalDateTime from "@/components/LocalDateTime";
 
-export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string; page?: string } }) {
+export default async function ClassesPage({ searchParams }: { searchParams?: { activity?: string; date?: string; time?: string; page?: string; gym?: string } }) {
   // searchParams can be a Promise in some Next.js runtimes — await it before use
   const sp = await (searchParams as any);
   const activity = sp?.activity ?? null;
   const date = sp?.date ?? null;
   const time = sp?.time ?? null;
+  const gym = sp?.gym ?? null;
   const page = parseInt(sp?.page || "1", 10) || 1;
   const perPage = 10;
 
@@ -17,6 +18,9 @@ export default async function ClassesPage({ searchParams }: { searchParams?: { a
     let q: any = supabase.from("classes").select("*", { count: "exact" });
     if (activity) {
       q = q.filter("title", "ilike", `%${activity}%`);
+    }
+    if (gym) {
+      q = q.eq("gym_id", gym);
     }
 
     if (date) {
