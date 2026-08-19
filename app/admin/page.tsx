@@ -581,33 +581,58 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="mb-4 p-4 border rounded-lg bg-gray-50">
-        <h2 className="text-xl font-semibold mb-3">Clases programadas</h2>
-        <div className="grid gap-2 md:grid-cols-3">
-          <input
-            className="border p-2 rounded"
-            placeholder="Buscar por título"
-            value={classSearch}
-            onChange={(e) => setClassSearch(e.target.value)}
-          />
-          <input
-            type="date"
-            className="border p-2 rounded"
-            value={classDateFilter}
-            onChange={(e) => setClassDateFilter(e.target.value)}
-          />
-          <select
-            className="border p-2 rounded"
-            value={classStatusFilter}
-            onChange={(e) => setClassStatusFilter(e.target.value)}
+      <div className="mb-6 rounded-lg border border-slate-300 bg-slate-100 p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Clases programadas</h2>
+            <p className="mt-1 text-sm text-slate-600">Filtrá la agenda y revisá las inscripciones de cada clase.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setClassSearch("");
+              setClassDateFilter("");
+              setClassStatusFilter("all");
+            }}
+            className="rounded border border-slate-400 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
-            <option value="all">Todas las clases</option>
-            <option value="available">Con cupos</option>
-            <option value="full">Completas</option>
-          </select>
+            Limpiar filtros
+          </button>
         </div>
-        <p className="text-sm text-gray-600 mt-2">
-          Mostrando {visibleClasses.length} de {classes.length} clases. Para conocer el estado exacto, abrí la lista de anotados.
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Actividad
+            <input
+              className="rounded border border-slate-400 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+              placeholder="Buscar por título"
+              value={classSearch}
+              onChange={(e) => setClassSearch(e.target.value)}
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Fecha
+            <input
+              type="date"
+              className="rounded border border-slate-400 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+              value={classDateFilter}
+              onChange={(e) => setClassDateFilter(e.target.value)}
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Disponibilidad
+            <select
+              className="rounded border border-slate-400 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+              value={classStatusFilter}
+              onChange={(e) => setClassStatusFilter(e.target.value)}
+            >
+              <option value="all">Todas las clases</option>
+              <option value="available">Con cupos</option>
+              <option value="full">Completas</option>
+            </select>
+          </label>
+        </div>
+        <p className="mt-4 border-t border-slate-300 pt-3 text-sm text-slate-600">
+          Mostrando <span className="font-semibold text-slate-900">{visibleClasses.length}</span> de {classes.length} clases.
         </p>
       </div>
 
