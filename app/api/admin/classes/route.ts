@@ -59,6 +59,34 @@ export async function POST(req: Request) {
   return NextResponse.json({ data }, { status: 200 });
 }
 
+export async function GET(req: Request) {
+  if (!(await isAdminRequest(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const classId = new URL(req.url).searchParams.get("id");
+  if (!classId) return NextResponse.json({ error: "Missing id param" }, { status: 400 });
+
+  const { data: reservations, error } = await supabase
+    .from("reservations")
+    .select("id, user_id, created_at")
+    .eq("class_id", classId)
+    .order("created_at", { ascending: true });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const attendees = await Promise.all(
+    (reservations || []).map(async (reservation) => {
+      const { data } = await supabase.auth.admin.getUserById(reservation.user_id);
+      return {
+        ...reservation,
+        email: data.user?.email ?? null,
+        name: data.user?.user_metadata?.full_name ?? data.user?.user_metadata?.name ?? null,
+      };
+    })
+  );
+
+  return NextResponse.json({ data: attendees }, { status: 200 });
+}
+
 export async function PUT(req: Request) {
   if (!(await isAdminRequest(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

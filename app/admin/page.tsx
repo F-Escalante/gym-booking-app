@@ -17,6 +17,21 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [classSearch, setClassSearch] = useState("");
+  const [classDateFilter, setClassDateFilter] = useState("");
+  const [classStatusFilter, setClassStatusFilter] = useState("all");
+  const [attendeesByClass, setAttendeesByClass] = useState<Record<string, any[]>>({});
+  const [loadingAttendeesId, setLoadingAttendeesId] = useState<string | null>(null);
+  const [seriesTitle, setSeriesTitle] = useState("");
+  const [seriesDescription, setSeriesDescription] = useState("");
+  const [seriesCapacity, setSeriesCapacity] = useState(1);
+  const [seriesWeekdays, setSeriesWeekdays] = useState<number[]>([]);
+  const [seriesTime, setSeriesTime] = useState("");
+  const [seriesStartDate, setSeriesStartDate] = useState("");
+  const [seriesEndDate, setSeriesEndDate] = useState("");
+  const [seriesList, setSeriesList] = useState<any[]>([]);
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
+  const [propagateOnUpdate, setPropagateOnUpdate] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,15 +50,6 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      const loadClasses = async () => {
-        const { data, error } = await supabase.from("classes").select("*");
-        if (error) {
-          setError(error.message);
-          return;
-        }
-        setClasses(data || []);
-      };
-
       const loadAll = async () => {
         const [{ data: classesData, error: classesErr }, { data: seriesData, error: seriesErr }] = await Promise.all([
           supabase.from("classes").select("*"),
@@ -175,18 +181,6 @@ export default function AdminPage() {
     setError(null);
     setSuccess(null);
   };
-
-  // Series (recurrence) state
-  const [seriesTitle, setSeriesTitle] = useState("");
-  const [seriesDescription, setSeriesDescription] = useState("");
-  const [seriesCapacity, setSeriesCapacity] = useState(1);
-  const [seriesWeekdays, setSeriesWeekdays] = useState<number[]>([]); // 0-6
-  const [seriesTime, setSeriesTime] = useState("");
-  const [seriesStartDate, setSeriesStartDate] = useState("");
-  const [seriesEndDate, setSeriesEndDate] = useState("");
-  const [seriesList, setSeriesList] = useState<any[]>([]);
-  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
-  const [propagateOnUpdate, setPropagateOnUpdate] = useState(true);
 
   const toggleWeekday = (d: number) => {
     setSeriesWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -381,6 +375,50 @@ export default function AdminPage() {
     }
   };
 
+  const loadAttendees = async (classId: string) => {
+    if (attendeesByClass[classId]) {
+      setAttendeesByClass((current) => {
+        const next = { ...current };
+        delete next[classId];
+        return next;
+      });
+      return;
+    }
+
+    const token = session?.access_token;
+    if (!token) return;
+
+    setLoadingAttendeesId(classId);
+    try {
+      const response = await fetch(`/api/admin/classes?id=${encodeURIComponent(classId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        setError(json?.error || "No se pudieron cargar las personas anotadas.");
+        return;
+      }
+      setAttendeesByClass((current) => ({ ...current, [classId]: json.data || [] }));
+    } catch (e: any) {
+      setError(e?.message || "No se pudieron cargar las personas anotadas.");
+    } finally {
+      setLoadingAttendeesId(null);
+    }
+  };
+
+  const visibleClasses = classes
+    .filter((gymClass) => {
+      const matchesSearch = !classSearch.trim() || gymClass.title?.toLowerCase().includes(classSearch.trim().toLowerCase());
+      const matchesDate = !classDateFilter || gymClass.class_date?.slice(0, 10) === classDateFilter;
+      const attendeeCount = attendeesByClass[gymClass.id]?.length;
+      const matchesStatus =
+        classStatusFilter === "all" ||
+        (classStatusFilter === "available" && (attendeeCount === undefined || attendeeCount < gymClass.capacity)) ||
+        (classStatusFilter === "full" && attendeeCount !== undefined && attendeeCount >= gymClass.capacity);
+      return matchesSearch && matchesDate && matchesStatus;
+    })
+    .sort((a, b) => new Date(a.class_date).getTime() - new Date(b.class_date).getTime());
+
   return (
     <main className="p-8 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Administrador de Clases</h1>
@@ -543,14 +581,57 @@ export default function AdminPage() {
         </div>
       </div>
 
+      <div className="mb-4 p-4 border rounded-lg bg-gray-50">
+        <h2 className="text-xl font-semibold mb-3">Clases programadas</h2>
+        <div className="grid gap-2 md:grid-cols-3">
+          <input
+            className="border p-2 rounded"
+            placeholder="Buscar por título"
+            value={classSearch}
+            onChange={(e) => setClassSearch(e.target.value)}
+          />
+          <input
+            type="date"
+            className="border p-2 rounded"
+            value={classDateFilter}
+            onChange={(e) => setClassDateFilter(e.target.value)}
+          />
+          <select
+            className="border p-2 rounded"
+            value={classStatusFilter}
+            onChange={(e) => setClassStatusFilter(e.target.value)}
+          >
+            <option value="all">Todas las clases</option>
+            <option value="available">Con cupos</option>
+            <option value="full">Completas</option>
+          </select>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">
+          Mostrando {visibleClasses.length} de {classes.length} clases. Para conocer el estado exacto, abrí la lista de anotados.
+        </p>
+      </div>
+
       <div className="space-y-4">
-        {classes.map((gymClass) => (
+        {visibleClasses.map((gymClass) => (
           <div key={gymClass.id} className="border rounded-lg p-4 shadow">
             <h3 className="text-xl font-semibold">{gymClass.title}</h3>
             <p>{gymClass.description}</p>
-            <p>Fecha: <span>{/* client formats timezone correctly */}<script type="module" /></span><span className="inline-block"><LocalDateTime iso={gymClass.class_date} locale="es-AR" /></span></p>
-            <p>Cupos: {gymClass.capacity}</p>
-            <div className="mt-4 flex gap-2">
+            <p>Fecha: <LocalDateTime iso={gymClass.class_date} locale="es-AR" /></p>
+            <p>
+              Cupos: {attendeesByClass[gymClass.id]?.length ?? "?"} / {gymClass.capacity}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => loadAttendees(gymClass.id)}
+                disabled={loadingAttendeesId === gymClass.id}
+                className="bg-indigo-600 text-white px-3 py-1 rounded"
+              >
+                {loadingAttendeesId === gymClass.id
+                  ? "Cargando..."
+                  : attendeesByClass[gymClass.id]
+                  ? "Ocultar anotados"
+                  : "Ver anotados"}
+              </button>
               <button
                 onClick={() => editClass(gymClass)}
                 className="bg-blue-600 text-white px-3 py-1 rounded"
@@ -564,6 +645,23 @@ export default function AdminPage() {
                 Eliminar
               </button>
             </div>
+            {attendeesByClass[gymClass.id] ? (
+              <div className="mt-4 border-t pt-3">
+                <h4 className="font-semibold">Personas anotadas ({attendeesByClass[gymClass.id].length})</h4>
+                {attendeesByClass[gymClass.id].length === 0 ? (
+                  <p className="text-sm text-gray-600 mt-1">Todavía no hay reservas.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {attendeesByClass[gymClass.id].map((attendee) => (
+                      <li key={attendee.id} className="flex flex-wrap justify-between gap-2 border-b py-1">
+                        <span>{attendee.name || attendee.email || attendee.user_id}</span>
+                        {attendee.name && attendee.email ? <span className="text-gray-600">{attendee.email}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
