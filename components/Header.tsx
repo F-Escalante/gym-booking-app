@@ -68,7 +68,7 @@ export default function Header() {
           {isOwner ? <Link href="/gyms">Mis gimnasios</Link> : null}
           <Link href="/reservations">Mis Reservas</Link>
           <Link href="/me">Mi Perfil</Link>
-          <Link href="/admin">Admin</Link>
+          {isOwner ? <Link href="/admin">Admin</Link> : null}
         </nav>
 
         <div className="flex items-center gap-4">
