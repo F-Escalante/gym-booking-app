@@ -9,7 +9,7 @@ function getServerClient() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-async function getUser(request: Request, supabase: ReturnType<typeof createClient>) {
+async function getUser(request: Request, supabase: NonNullable<ReturnType<typeof getServerClient>>) {
   const authorization = request.headers.get("authorization");
   if (!authorization?.toLowerCase().startsWith("bearer ")) return null;
   const token = authorization.slice(7).trim();
@@ -38,7 +38,6 @@ export async function POST(request: Request) {
 
   if (invitationError) return NextResponse.json({ error: invitationError.message }, { status: 500 });
   if (!invitation) return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
-  if (invitation.used_at) return NextResponse.json({ error: "Invitation already used" }, { status: 409 });
   if (invitation.expires_at && new Date(invitation.expires_at) <= new Date()) {
     return NextResponse.json({ error: "Invitation expired" }, { status: 410 });
   }
@@ -62,15 +61,8 @@ export async function POST(request: Request) {
 
   const { error: membershipError } = await supabase
     .from("gym_memberships")
-    .insert({ gym_id: invitation.gym_id, user_id: user.id, role: "member" });
+    .insert({ gym_id: invitation.gym_id, user_id: user.id, role: "member", status: "pending" });
   if (membershipError) return NextResponse.json({ error: membershipError.message }, { status: 500 });
 
-  const { error: invitationUpdateError } = await supabase
-    .from("gym_invitations")
-    .update({ used_at: new Date().toISOString() })
-    .eq("id", invitation.id)
-    .is("used_at", null);
-
-  if (invitationUpdateError) return NextResponse.json({ error: invitationUpdateError.message }, { status: 500 });
   return NextResponse.json({ data: gym }, { status: 200 });
 }

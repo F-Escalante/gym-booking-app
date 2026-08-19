@@ -10,6 +10,15 @@ type Gym = {
   created_by: string;
 };
 
+type GymMember = {
+  gym_id: string;
+  user_id: string;
+  role: string;
+  status: "pending" | "active" | "suspended" | "revoked";
+  email: string | null;
+  name: string | null;
+};
+
 export default function GymsPage() {
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -24,6 +33,9 @@ export default function GymsPage() {
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinMessage, setJoinMessage] = useState<string | null>(null);
+  const [members, setMembers] = useState<GymMember[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberMessage, setMemberMessage] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -53,7 +65,18 @@ export default function GymsPage() {
       } else {
         setGyms(data || []);
         setCanCreateGym(canCreate === true);
-        setIsOwner((memberships || []).some((membership) => membership.role === "owner"));
+        const owner = (memberships || []).some((membership) => membership.role === "owner");
+        setIsOwner(owner);
+        const ownerGym = (data || []).find((gym) => gym.created_by === user.id);
+        const accessToken = sessionData.session?.access_token;
+        if (owner && ownerGym && accessToken) {
+          const membersResponse = await fetch(`/api/gyms/members?gym_id=${encodeURIComponent(ownerGym.id)}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          const membersResult = await membersResponse.json();
+          if (membersResponse.ok) setMembers(membersResult.data || []);
+          else setMemberMessage(membersResult.error || "No se pudieron cargar los clientes.");
+        }
       }
       setLoading(false);
     };
@@ -150,7 +173,29 @@ export default function GymsPage() {
 
     setGyms((current) => [...current, result.data]);
     setJoinCode("");
-    setJoinMessage(`Ya sos miembro de ${result.data.name}.`);
+    setJoinMessage(`Solicitud enviada a ${result.data.name}. El owner debe aprobar tu acceso.`);
+  };
+
+  const updateMemberStatus = async (member: GymMember, status: GymMember["status"]) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    const gymId = member.gym_id;
+    if (!token) return;
+
+    setMemberLoading(true);
+    setMemberMessage(null);
+    const response = await fetch("/api/gyms/members", {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ gym_id: gymId, user_id: member.user_id, status }),
+    });
+    const result = await response.json();
+    setMemberLoading(false);
+    if (!response.ok) {
+      setMemberMessage(result.error || "No se pudo actualizar el estado del cliente.");
+      return;
+    }
+    setMembers((current) => current.map((item) => item.user_id === member.user_id ? { ...item, ...result.data } : item));
   };
 
   if (loading) {
@@ -231,10 +276,50 @@ export default function GymsPage() {
         )}
       </section> : null}
 
+      {isOwner ? (
+        <section className="mt-8 rounded-lg border border-slate-300 bg-slate-100 p-5 shadow-sm">
+          <h2 className="mb-2 text-xl font-semibold text-slate-900">Clientes</h2>
+          <p className="mb-4 text-sm text-slate-600">Aprobá el acceso después de confirmar el pago y suspendelo si deja de pagar.</p>
+          {memberMessage ? <p className="mb-3 text-sm text-red-700">{memberMessage}</p> : null}
+          {members.length === 0 ? (
+            <p className="text-sm text-slate-600">Todavía no hay solicitudes ni clientes.</p>
+          ) : (
+            <div className="space-y-3">
+              {members.filter((member) => member.role !== "owner").map((member) => (
+                <div key={member.user_id} className="flex flex-col gap-3 rounded border border-slate-300 bg-white p-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-medium text-slate-900">{member.name || member.email || member.user_id}</p>
+                    {member.name && member.email ? <p className="text-sm text-slate-600">{member.email}</p> : null}
+                    <p className="text-sm text-slate-600">Estado: <span className="font-semibold">{member.status}</span></p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {member.status !== "active" ? (
+                      <button type="button" disabled={memberLoading} onClick={() => updateMemberStatus(member, "active")} className="rounded bg-green-600 px-3 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-60">
+                        Aprobar / reactivar
+                      </button>
+                    ) : null}
+                    {member.status === "active" ? (
+                      <button type="button" disabled={memberLoading} onClick={() => updateMemberStatus(member, "suspended")} className="rounded bg-amber-600 px-3 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-60">
+                        Suspender
+                      </button>
+                    ) : null}
+                    {member.status !== "revoked" ? (
+                      <button type="button" disabled={memberLoading} onClick={() => updateMemberStatus(member, "revoked")} className="rounded bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-60">
+                        Revocar
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {invitationCode && selectedGymId ? (
         <section className="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-5">
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Código de invitación</h2>
-          <p className="text-sm text-slate-600">Compartí este código con un cliente. Es de un solo uso.</p>
+          <p className="text-sm text-slate-600">Compartí este código con todos los clientes que quieras sumar al gimnasio.</p>
           <p className="mt-3 rounded border border-blue-200 bg-white px-4 py-3 text-center text-2xl font-bold tracking-widest text-blue-800">
             {invitationCode}
           </p>

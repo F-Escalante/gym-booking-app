@@ -10,7 +10,7 @@ function getServerClient() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-async function getUser(request: Request, supabase: ReturnType<typeof createClient>) {
+async function getUser(request: Request, supabase: any) {
   const authorization = request.headers.get("authorization");
   if (!authorization?.toLowerCase().startsWith("bearer ")) return null;
   const token = authorization.slice(7).trim();
@@ -40,6 +40,23 @@ export async function POST(request: Request) {
 
   if (membershipError) return NextResponse.json({ error: membershipError.message }, { status: 500 });
   if (membership?.role !== "owner") return NextResponse.json({ error: "Only the gym owner can create invitations" }, { status: 403 });
+
+  const { data: existingInvitation, error: existingInvitationError } = await supabase
+    .from("gym_invitations")
+    .select("id, gym_id, code, expires_at, used_at, created_at")
+    .eq("gym_id", gymId)
+    .is("expires_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingInvitationError) {
+    return NextResponse.json({ error: existingInvitationError.message }, { status: 500 });
+  }
+
+  if (existingInvitation) {
+    return NextResponse.json({ data: existingInvitation }, { status: 200 });
+  }
 
   const code = randomBytes(5).toString("hex").toUpperCase();
   const { data, error } = await supabase
